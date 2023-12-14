@@ -1,0 +1,6 @@
+beautifulsoup4==4.10.0  # For web scraping
+requests==2.26.0        # For making HTTP requests
+pymysql==1.0.2           # For connecting to a MySQL database
+selenium==4.0.0          # For web automation
+
+# Add more dependencies as needed
