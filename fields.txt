@@ -1,1 +1,1 @@
-company,job_title,salary,end_date,start_date,try_time,level,hiring_number,work_type,exp_require,job_description,job_requirement,job_benefit,job_location
+ten_cong_ty,tieu_de,muc_luong,ngay_ket_thuc,ngay_bat_dau,thoi_gian_thu_viec,chuc_vu,so_luong,hinh_thuc_lam_viec,yeu_cau_kinh_nghiem,mo_ta,yeu_cau_ung_vien,quyen_loi,dia_chi,nganh_nghe,dia_chi_cong_ty
