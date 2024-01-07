@@ -6,7 +6,6 @@ from bs4 import BeautifulSoup
 import csv
 import subprocess
 import mysql.connector
-import bcrypt
 
 baseUrl = 'https://vieclam24h.vn'
 masothue_url = 'https://masothue.com/Search'
@@ -82,23 +81,27 @@ def import_to_tbl_bai_dang(job_details, user, nganh_nghe, cursor):
     cursor.execute(query, data)
 
 
-def generate_laravel_bcrypt(password, salt_rounds=12):
-    salt = bcrypt.gensalt(rounds=salt_rounds)
-    hashed_password = bcrypt.hashpw(password.encode('utf-8'), salt)
-    return hashed_password.decode('utf-8')  # Convert bytes to string
+def generate_laravel_bcrypt():
+    return '$2y$12$oAmAyV34K.G5cYQSk21diOfwy5qSH/j1OoINWDl7mEGnwsanWXsSK'  # Convert bytes to string
 
 
 def create_tai_khoan(job, cursor):
     current_timestamp = int(time.time())
-    email = f'company_{current_timestamp}@vieclam24h.com'
+    email = f'company_{current_timestamp}@vieclam24h.vn'
+
+    while get_by_name(email, 'tbl_tai_khoan', 'tai_khoan', cursor):
+        current_timestamp = int(time.time())
+        email = f'company_{current_timestamp}@vieclam24h.vn'
+
     ten = job.get('ten_cong_ty', '')
+    dia_chi = job.get('ten_cong_ty', '')
     ten_cong_ty = job.get('ten_cong_ty', '')
-    mat_khau = generate_laravel_bcrypt('abcd@1234')
+    mat_khau = generate_laravel_bcrypt()
 
-    query = """INSERT INTO tbl_tai_khoan (tai_khoan, ten, email, mat_khau, ma_quyen, trang_thai, dia_chi, ten_cong_ty)
-                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+    query = """INSERT INTO tbl_tai_khoan (tai_khoan, ten, email, mat_khau, ma_quyen, trang_thai, dia_chi, ten_cong_ty, created_at)
+                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())"""
 
-    data = (email, ten, email, mat_khau, 3, 1, job.get('dia_chi_cong_ty', ''), ten_cong_ty)
+    data = (email, ten, email, mat_khau, 3, 1, dia_chi, ten_cong_ty)
     try:
         cursor.execute(query, data)
         return get_by_name(ten, 'tbl_tai_khoan', 'ten', cursor)
@@ -135,7 +138,8 @@ def extract_job_details(soup, connection):
             print("Getting information for " + job_title)
             salary = info_ele[1].text.strip() if info_ele and info_ele[1] else ''
             end_date = info_ele[3].text.strip() if info_ele and info_ele[3] else ''
-            start_date = main.findAll('i', {'class': 'svicon-calendar-day'})[1].next_element.findAll('p')[1].text.strip()
+            start_date = main.findAll('i', {'class': 'svicon-calendar-day'})[1].next_element.findAll('p')[
+                1].text.strip()
             try_time = try_time_ele.next_element.findAll('p')[1].text.strip() if try_time_ele else '0'
             level = main.find('i', {'class': 'svicon-medal'}).next_element.findAll('p')[1].text.strip()
             hiring_number = main.find('i', {'class': 'svicon-users'}).next_element.findAll('p')[1].text.strip()
@@ -150,7 +154,8 @@ def extract_job_details(soup, connection):
             job_benefit = ''.join(str(child) for child in JB.contents)
             JL = main.find('h4', string='Địa điểm làm việc').next_sibling
             job_location = ''.join(str(child) for child in JL.contents)
-            company_location = soup.find('div', {'id': 'test'}).find('i', {'class': 'svicon-map-marker-alt'}).parent.next_sibling.text.strip()
+            company_location = soup.find('div', {'id': 'test'}).find('i', {
+                'class': 'svicon-map-marker-alt'}).parent.next_sibling.text.strip()
 
             job = {
                 'tieu_de': job_title,
@@ -180,6 +185,9 @@ def extract_job_details(soup, connection):
             if not nganh_nghe:
                 nganh_nghe = create_nganh_nghe(job.get('nganh_nghe', ''), cursor)
 
+            if not tai_khoan:
+                continue
+
             import_to_tbl_bai_dang(job, tai_khoan, nganh_nghe, cursor)
             job_details.append(job)
 
@@ -203,6 +211,12 @@ def delete_job_cao_du_lieu(cursor):
     cursor.execute(query)
 
 
+def delete_old_tai_khoan(cursor):
+    pattern = f"%@vieclam24h.com%"
+    query = f'DELETE FROM tbl_tai_khoan WHERE tai_khoan like %s AND created_at IS NULL'
+    cursor.execute(query, (pattern,))
+
+
 def main():
     starting_url = 'https://vieclam24h.vn/viec-lam-da-nang-p104.html'
     output_csv_file = 'vieclam24h_danang.csv'
@@ -213,6 +227,7 @@ def main():
 
     with connection.cursor(dictionary=True) as cursor:
         delete_job_cao_du_lieu(cursor)
+        delete_old_tai_khoan(cursor)
         connection.commit()
         cursor.close()
 
