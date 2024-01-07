@@ -57,8 +57,8 @@ def import_to_tbl_bai_dang(job_details, user, nganh_nghe, cursor):
     query = """
         insert into tbl_bai_dang (ma_nganh_nghe, tai_khoan, tieu_de, mo_ta, dia_diem_lam_viec, thoi_gian_bat_dau,
                           thoi_gian_ket_thuc, kinh_nghiem, hinh_thuc_lam_viec, chuc_vu, so_luong, yeu_cau_ung_vien,
-                          quyen_loi, cach_thuc_ung_tuyen, job_cao_du_lieu)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1)
+                          quyen_loi, cach_thuc_ung_tuyen, job_cao_du_lieu, trang_thai)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 1, 1)
     """
 
     data = (
@@ -111,7 +111,7 @@ def create_tai_khoan(job, cursor):
 
 
 def create_nganh_nghe(ten_nganh_nghe, cursor):
-    query = """INSERT INTO tbl_nganh_nghe (ten_nganh_nghe) VALUES(%s)"""
+    query = """INSERT INTO tbl_nganh_nghe (ten_nganh_nghe, is_crawl_data) VALUES(%s, 1)"""
     data = (ten_nganh_nghe,)
     cursor.execute(query, data)
     return get_by_name(ten_nganh_nghe, 'tbl_nganh_nghe', 'ten_nganh_nghe', cursor)
@@ -217,6 +217,11 @@ def delete_old_tai_khoan(cursor):
     cursor.execute(query, (pattern,))
 
 
+def delete_old_nganh_nghe(cursor):
+    query = f'DELETE FROM tbl_nganh_nghe WHERE is_crawl_data IS TRUE'
+    cursor.execute(query)
+
+
 def main():
     starting_url = 'https://vieclam24h.vn/viec-lam-da-nang-p104.html'
     output_csv_file = 'vieclam24h_danang.csv'
@@ -228,6 +233,7 @@ def main():
     with connection.cursor(dictionary=True) as cursor:
         delete_job_cao_du_lieu(cursor)
         delete_old_tai_khoan(cursor)
+        delete_old_nganh_nghe(cursor)
         connection.commit()
         cursor.close()
 
